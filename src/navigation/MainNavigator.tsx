@@ -13,17 +13,20 @@ import ProfileScreen from '../screens/ProfileScreen';
 import FriendRequestsScreen from '../screens/FriendRequestsScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
 import GroupSettingsScreen from '../screens/GroupSettingsScreen';
+import UserProfileScreen from '../screens/UserProfileScreen';
 import { useAuth } from '../store/AuthContext';
 import { Bell } from 'lucide-react-native';
 import io from 'socket.io-client';
 import axios from 'axios';
 import { API_URL } from '../config';
+import { useTheme } from '../theme/ThemeContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 const TabNavigator = () => {
     const { logout, user, token } = useAuth();
+    const { theme } = useTheme();
     const [requestCount, setRequestCount] = React.useState(0);
     const socketRef = React.useRef<any>(null);
 
@@ -60,9 +63,12 @@ const TabNavigator = () => {
     return (
         <Tab.Navigator
             screenOptions={{
-                tabBarActiveTintColor: '#000',
-                tabBarInactiveTintColor: '#888',
+                tabBarActiveTintColor: theme.colors.primary,
+                tabBarInactiveTintColor: theme.colors.subtext,
                 headerShown: true,
+                headerStyle: { backgroundColor: theme.colors.card },
+                headerTintColor: theme.colors.text,
+                tabBarStyle: { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border },
             }}
         >
             <Tab.Screen
@@ -76,8 +82,8 @@ const TabNavigator = () => {
                             onPress={logout}
                             style={{ marginRight: 15, flexDirection: 'row', alignItems: 'center' }}
                         >
-                            <LogOut color="#ff4444" size={20} />
-                            <Text style={{ color: '#ff4444', marginLeft: 5, fontWeight: '600' }}>Log Out</Text>
+                            <LogOut color={theme.colors.notification} size={20} />
+                            <Text style={{ color: theme.colors.notification, marginLeft: 5, fontWeight: '600' }}>Log Out</Text>
                         </TouchableOpacity>
                     ),
                 }}
@@ -98,20 +104,20 @@ const TabNavigator = () => {
                             }}
                         >
                             <View>
-                                <Bell color="#000" size={24} />
+                                <Bell color={theme.colors.text} size={24} />
                                 {requestCount > 0 && (
                                     <View style={{
                                         position: 'absolute',
                                         right: -2,
                                         top: -2,
-                                        backgroundColor: 'red',
+                                        backgroundColor: theme.colors.notification,
                                         borderRadius: 6,
                                         width: 12,
                                         height: 12,
                                         justifyContent: 'center',
                                         alignItems: 'center',
                                         borderWidth: 2,
-                                        borderColor: '#fff'
+                                        borderColor: theme.colors.card
                                     }} />
                                 )}
                             </View>
@@ -133,11 +139,12 @@ const TabNavigator = () => {
 
 const MainNavigator = () => {
     const { user, isLoading } = useAuth();
+    const { theme } = useTheme();
 
     if (isLoading) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" color="#000" />
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
             </View>
         );
     }
@@ -176,6 +183,11 @@ const MainNavigator = () => {
                         name="GroupSettings"
                         component={GroupSettingsScreen}
                         options={{ title: 'Group Settings' }}
+                    />
+                    <Stack.Screen
+                        name="UserProfile"
+                        component={UserProfileScreen}
+                        options={{ title: 'Profile' }}
                     />
                 </>
             ) : (

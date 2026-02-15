@@ -1,15 +1,16 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, TextInput, FlatList, Dimensions } from 'react-native';
 import { Heart, MessageCircle, Send, MoreHorizontal } from 'lucide-react-native';
 
 interface PostProps {
     post: {
         id: string;
-        imageUrl: string;
+        images: string[];
         caption: string;
         isLiked?: boolean;
         likes?: any[];
         user: {
+            id: string;
             username: string;
             avatar: string | null;
         };
@@ -22,13 +23,23 @@ interface PostProps {
     onLike: (isLiked: boolean) => void;
     onComment: (comment: string) => void;
     onShare: () => void;
+    navigation: any;
 }
 
-const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment }) => {
+import axios from 'axios';
+import { API_URL } from '../config';
+import { useTheme } from '../theme/ThemeContext';
+import { useAuth } from '../store/AuthContext';
+import { Alert } from 'react-native';
+
+const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment, navigation }) => {
     const [isLiked, setIsLiked] = React.useState(post.isLiked);
     const [likeCount, setLikeCount] = React.useState(post._count.likes);
     const [showCommentInput, setShowCommentInput] = React.useState(false);
     const [commentText, setCommentText] = React.useState('');
+    const [activeIndex, setActiveIndex] = React.useState(0);
+    const { theme } = useTheme();
+    const { token } = useAuth();
 
     const handleLikeToggle = () => {
         const newStatus = !isLiked;
@@ -45,28 +56,92 @@ const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment }) => 
         }
     };
 
+    const handleReport = async () => {
+        try {
+            await axios.post(`${API_URL}/api/privacy/report`, {
+                targetId: post.id,
+                reason: 'Inappropriate Content',
+                type: 'POST'
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            alert('Post reported. Thank you for helping keep our community safe.');
+        } catch (error) {
+            console.error('Report error:', error);
+            alert('Failed to report post.');
+        }
+    };
+
+    const navigateToProfile = () => {
+        navigation.navigate('UserProfile', { userId: post.user.id });
+    };
+
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.colors.card }]}>
             <View style={styles.header}>
-                <View style={styles.userInfo}>
+                <TouchableOpacity style={styles.userInfo} onPress={navigateToProfile}>
                     <Image
                         source={{ uri: post.user.avatar || 'https://via.placeholder.com/32' }}
-                        style={styles.avatar}
+                        style={[styles.avatar, { backgroundColor: theme.colors.background }]}
                     />
-                    <Text style={styles.username}>{post.user.username}</Text>
-                </View>
-                <TouchableOpacity>
-                    <MoreHorizontal color="#000" size={20} />
+                    <Text style={[styles.username, { color: theme.colors.text }]}>{post.user.username}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => {
+                    Alert.alert(
+                        "Post Options",
+                        "",
+                        [
+                            { text: "Report Post", onPress: handleReport, style: 'destructive' },
+                            { text: "Cancel", style: 'cancel' }
+                        ]
+                    );
+                }}>
+                    <MoreHorizontal color={theme.colors.text} size={20} />
                 </TouchableOpacity>
             </View>
 
-            <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
+            {post.images && post.images.length > 0 ? (
+                <View>
+                    <FlatList
+                        data={post.images}
+                        keyExtractor={(item, index) => `${post.id}-image-${index}`}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        onScroll={(e) => {
+                            const offset = e.nativeEvent.contentOffset.x;
+                            const index = Math.round(offset / Dimensions.get('window').width);
+                            setActiveIndex(index);
+                        }}
+                        renderItem={({ item }) => (
+                            <Image
+                                source={{ uri: item }}
+                                style={[styles.postImage, { backgroundColor: theme.colors.background }]}
+                                resizeMode="cover"
+                            />
+                        )}
+                    />
+                    {post.images.length > 1 && (
+                        <View style={styles.pagination}>
+                            {post.images.map((_, index) => (
+                                <View
+                                    key={index}
+                                    style={[
+                                        styles.dot,
+                                        { backgroundColor: index === activeIndex ? theme.colors.primary : 'rgba(255,255,255,0.5)' }
+                                    ]}
+                                />
+                            ))}
+                        </View>
+                    )}
+                </View>
+            ) : null}
 
             <View style={styles.actions}>
                 <View style={styles.leftActions}>
                     <TouchableOpacity onPress={handleLikeToggle} style={styles.actionButton}>
                         <Heart
-                            color={isLiked ? "#ED4956" : "#000"}
+                            color={isLiked ? "#ED4956" : theme.colors.text}
                             fill={isLiked ? "#ED4956" : "transparent"}
                             size={24}
                         />
@@ -75,22 +150,22 @@ const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment }) => 
                         style={styles.actionButton}
                         onPress={() => setShowCommentInput(!showCommentInput)}
                     >
-                        <MessageCircle color="#000" size={24} />
+                        <MessageCircle color={theme.colors.text} size={24} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={onShare} style={styles.actionButton}>
-                        <Send color="#000" size={24} />
+                        <Send color={theme.colors.text} size={24} />
                     </TouchableOpacity>
                 </View>
             </View>
 
             <View style={styles.likesContainer}>
-                <Text style={styles.likesText}>{likeCount} likes</Text>
+                <Text style={[styles.likesText, { color: theme.colors.text }]}>{likeCount} likes</Text>
             </View>
 
             <View style={styles.captionContainer}>
                 <View style={styles.captionRow}>
-                    <Text style={styles.username}>{post.user.username} </Text>
-                    <Text style={styles.captionText}>{post.caption}</Text>
+                    <Text style={[styles.username, { color: theme.colors.text }]}>{post.user.username} </Text>
+                    <Text style={[styles.captionText, { color: theme.colors.text }]}>{post.caption}</Text>
                 </View>
             </View>
 
@@ -98,8 +173,8 @@ const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment }) => 
                 <View style={styles.commentsList}>
                     {post.comments.map((comment: any) => (
                         <View key={comment.id} style={styles.commentItem}>
-                            <Text style={styles.commentUsername}>{comment.user.username} </Text>
-                            <Text style={styles.commentText}>{comment.content}</Text>
+                            <Text style={[styles.commentUsername, { color: theme.colors.text }]}>{comment.user.username} </Text>
+                            <Text style={[styles.commentText, { color: theme.colors.subtext }]}>{comment.content}</Text>
                         </View>
                     ))}
                 </View>
@@ -107,16 +182,17 @@ const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment }) => 
 
             {showCommentInput && (
                 <View style={styles.commentInputContainer}>
-                    <View style={styles.inputWrapper}>
+                    <View style={[styles.inputWrapper, { borderBottomColor: theme.colors.border }]}>
                         <TextInput
-                            style={styles.commentInput}
+                            style={[styles.commentInput, { color: theme.colors.text }]}
                             placeholder="Add a comment..."
+                            placeholderTextColor={theme.colors.subtext}
                             value={commentText}
                             onChangeText={setCommentText}
                             multiline
                         />
                         <TouchableOpacity onPress={handleCommentSubmit}>
-                            <Text style={styles.postText}>Post</Text>
+                            <Text style={[styles.postText, { color: theme.colors.primary }]}>Post</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -124,7 +200,7 @@ const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment }) => 
 
             {post._count.comments > 0 && (
                 <TouchableOpacity style={styles.commentsContainer}>
-                    <Text style={styles.viewCommentsText}>
+                    <Text style={[styles.viewCommentsText, { color: theme.colors.subtext }]}>
                         View all {post._count.comments} comments
                     </Text>
                 </TouchableOpacity>
@@ -136,7 +212,6 @@ const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment }) => 
 const styles = StyleSheet.create({
     container: {
         marginBottom: 16,
-        backgroundColor: '#fff',
     },
     header: {
         flexDirection: 'row',
@@ -153,17 +228,26 @@ const styles = StyleSheet.create({
         height: 32,
         borderRadius: 16,
         marginRight: 10,
-        backgroundColor: '#eee',
     },
     username: {
         fontWeight: 'bold',
         fontSize: 14,
-        color: '#000',
     },
     postImage: {
-        width: '100%',
+        width: Dimensions.get('window').width,
         aspectRatio: 1,
-        backgroundColor: '#eee',
+    },
+    pagination: {
+        flexDirection: 'row',
+        position: 'absolute',
+        bottom: 10,
+        alignSelf: 'center',
+    },
+    dot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        marginHorizontal: 3,
     },
     actions: {
         flexDirection: 'row',
@@ -181,7 +265,6 @@ const styles = StyleSheet.create({
     },
     likesText: {
         fontWeight: 'bold',
-        color: '#000',
     },
     captionContainer: {
         paddingHorizontal: 12,
@@ -192,7 +275,6 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
     },
     captionText: {
-        color: '#000',
     },
     commentInputContainer: {
         paddingHorizontal: 12,
@@ -202,16 +284,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
     },
     commentInput: {
         flex: 1,
         paddingVertical: 8,
         fontSize: 14,
-        color: '#000',
     },
     postText: {
-        color: '#007AFF',
         fontWeight: 'bold',
         marginLeft: 10,
     },
@@ -220,7 +299,6 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
     },
     viewCommentsText: {
-        color: '#888',
         fontSize: 14,
     },
     commentsList: {
@@ -234,11 +312,9 @@ const styles = StyleSheet.create({
     commentUsername: {
         fontWeight: 'bold',
         fontSize: 13,
-        color: '#000',
     },
     commentText: {
         fontSize: 13,
-        color: '#333',
     },
 });
 
