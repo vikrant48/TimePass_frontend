@@ -1,6 +1,10 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, TextInput, FlatList, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, TextInput, FlatList, Dimensions, Alert } from 'react-native';
 import { Heart, MessageCircle, Send, MoreHorizontal } from 'lucide-react-native';
+import axios from 'axios';
+import { API_URL } from '../config';
+import { useTheme } from '../theme/ThemeContext';
+import { useAuth } from '../store/AuthContext';
 
 interface PostProps {
     post: {
@@ -26,18 +30,22 @@ interface PostProps {
     navigation: any;
 }
 
-import axios from 'axios';
-import { API_URL } from '../config';
-import { useTheme } from '../theme/ThemeContext';
-import { useAuth } from '../store/AuthContext';
-import { Alert } from 'react-native';
+const getPublicUrl = (url: string) => {
+    if (!url) return url;
+    if (url.includes('storage.supabase.co')) {
+        return url.replace('.storage.supabase.co/', '.supabase.co/storage/v1/object/public/');
+    }
+    return url;
+};
 
 const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment, navigation }) => {
-    const [isLiked, setIsLiked] = React.useState(post.isLiked);
-    const [likeCount, setLikeCount] = React.useState(post._count.likes);
-    const [showCommentInput, setShowCommentInput] = React.useState(false);
-    const [commentText, setCommentText] = React.useState('');
-    const [activeIndex, setActiveIndex] = React.useState(0);
+    // Transform images to public URLs
+    const images = post.images.map(getPublicUrl);
+    const [isLiked, setIsLiked] = useState(post.isLiked);
+    const [likeCount, setLikeCount] = useState(post._count.likes);
+    const [showCommentInput, setShowCommentInput] = useState(false);
+    const [commentText, setCommentText] = useState('');
+    const [activeIndex, setActiveIndex] = useState(0);
     const { theme } = useTheme();
     const { token } = useAuth();
 
@@ -65,10 +73,10 @@ const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment, navig
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            alert('Post reported. Thank you for helping keep our community safe.');
+            Alert.alert('Reported', 'Post reported. Thank you for helping keep our community safe.');
         } catch (error) {
             console.error('Report error:', error);
-            alert('Failed to report post.');
+            Alert.alert('Error', 'Failed to report post.');
         }
     };
 
@@ -81,7 +89,7 @@ const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment, navig
             <View style={styles.header}>
                 <TouchableOpacity style={styles.userInfo} onPress={navigateToProfile}>
                     <Image
-                        source={{ uri: post.user.avatar || 'https://via.placeholder.com/32' }}
+                        source={{ uri: post.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.user.username)}&background=random` }}
                         style={[styles.avatar, { backgroundColor: theme.colors.background }]}
                     />
                     <Text style={[styles.username, { color: theme.colors.text }]}>{post.user.username}</Text>
@@ -100,10 +108,10 @@ const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment, navig
                 </TouchableOpacity>
             </View>
 
-            {post.images && post.images.length > 0 ? (
+            {images && images.length > 0 ? (
                 <View>
                     <FlatList
-                        data={post.images}
+                        data={images}
                         keyExtractor={(item, index) => `${post.id}-image-${index}`}
                         horizontal
                         pagingEnabled
@@ -121,9 +129,9 @@ const PostCard: React.FC<PostProps> = ({ post, onLike, onShare, onComment, navig
                             />
                         )}
                     />
-                    {post.images.length > 1 && (
+                    {images.length > 1 && (
                         <View style={styles.pagination}>
-                            {post.images.map((_, index) => (
+                            {images.map((_, index) => (
                                 <View
                                     key={index}
                                     style={[

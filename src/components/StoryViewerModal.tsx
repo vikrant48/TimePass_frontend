@@ -12,6 +12,14 @@ interface StoryViewerProps {
     onClose: () => void;
 }
 
+const getPublicUrl = (url: string) => {
+    if (!url) return url;
+    if (url.includes('storage.supabase.co')) {
+        return url.replace('.storage.supabase.co/', '.supabase.co/storage/v1/object/public/');
+    }
+    return url;
+};
+
 const StoryViewerModal: React.FC<StoryViewerProps> = ({ visible, stories, initialIndex, onClose }) => {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const progress = React.useRef(new Animated.Value(0)).current;
@@ -82,7 +90,7 @@ const StoryViewerModal: React.FC<StoryViewerProps> = ({ visible, stories, initia
 
                 <View style={styles.header}>
                     <View style={styles.userInfo}>
-                        <Image source={{ uri: currentStory.user.avatar || 'https://via.placeholder.com/32' }} style={styles.avatar} />
+                        <Image source={{ uri: getPublicUrl(currentStory.user.avatar) || 'https://via.placeholder.com/32' }} style={styles.avatar} />
                         <Text style={styles.username}>{currentStory.user.username}</Text>
                         <Text style={styles.timeText}>{new Date(currentStory.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
                     </View>
@@ -92,7 +100,7 @@ const StoryViewerModal: React.FC<StoryViewerProps> = ({ visible, stories, initia
                 </View>
 
                 <View style={styles.content}>
-                    <Image source={{ uri: currentStory.imageUrl }} style={styles.storyImage} resizeMode="cover" />
+                    <Image source={{ uri: getPublicUrl(currentStory.imageUrl) }} style={styles.storyImage} resizeMode="cover" />
 
                     <View style={styles.navigationOverlay}>
                         <TouchableOpacity style={styles.navSection} onPress={handlePrev} />

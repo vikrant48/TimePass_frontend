@@ -17,27 +17,14 @@ const DEMO_AVATARS = [
 ];
 
 const ProfileScreen = () => {
-    const { user, token, setUser, logout, toggle2FA } = useAuth();
+    const { user, token, setUser, logout } = useAuth();
     const { theme, isDarkMode, toggleTheme } = useTheme();
     const [username, setUsername] = useState(user?.username || '');
     const [avatar, setAvatar] = useState(user?.avatar || '');
     const [bio, setBio] = useState(user?.bio || '');
     const [stats, setStats] = useState(user?._count || { followers: 0, following: 0, posts: 0 });
     const [loading, setLoading] = useState(false);
-    const [toggling2FA, setToggling2FA] = useState(false);
 
-    const handleToggle2FA = async (enabled: boolean) => {
-        setToggling2FA(true);
-        try {
-            await toggle2FA(enabled);
-            Alert.alert('Success', `2FA ${enabled ? 'enabled' : 'disabled'}`);
-        } catch (error) {
-            console.error('2FA toggle error:', error);
-            Alert.alert('Error', 'Failed to update 2FA setting');
-        } finally {
-            setToggling2FA(false);
-        }
-    };
 
     React.useEffect(() => {
         fetchProfile();
@@ -165,27 +152,6 @@ const ProfileScreen = () => {
                         />
                     </View>
 
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.label, { color: theme.colors.subtext }]}>Security</Text>
-                        <TouchableOpacity
-                            style={[styles.themeToggle, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
-                            onPress={() => handleToggle2FA(!user?.twoFactorEnabled)}
-                            disabled={toggling2FA}
-                        >
-                            <View style={styles.themeToggleLeft}>
-                                <Text style={[styles.themeToggleText, { color: theme.colors.text }]}>
-                                    Two-Factor Authentication
-                                </Text>
-                            </View>
-                            {toggling2FA ? (
-                                <ActivityIndicator size="small" color={theme.colors.primary} />
-                            ) : (
-                                <Text style={{ color: user?.twoFactorEnabled ? theme.colors.primary : theme.colors.subtext, fontWeight: 'bold' }}>
-                                    {user?.twoFactorEnabled ? 'ON' : 'OFF'}
-                                </Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
 
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, { color: theme.colors.subtext }]}>Theme Settings</Text>

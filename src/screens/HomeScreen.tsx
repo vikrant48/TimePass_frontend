@@ -10,6 +10,14 @@ import { PlusSquare, Search } from 'lucide-react-native';
 import { API_URL } from '../config';
 import { useTheme } from '../theme/ThemeContext';
 
+const getPublicUrl = (url: string) => {
+    if (!url) return url;
+    if (url.includes('storage.supabase.co')) {
+        return url.replace('.storage.supabase.co/', '.supabase.co/storage/v1/object/public/');
+    }
+    return url;
+};
+
 const HomeScreen = ({ navigation }: any) => {
     const [posts, setPosts] = useState<any[]>([]);
     const [stories, setStories] = useState<any[]>([]);
@@ -123,7 +131,7 @@ const HomeScreen = ({ navigation }: any) => {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storiesContent}>
                     <TouchableOpacity style={styles.storyItem} onPress={() => setModalVisible(true)}>
                         <View style={[styles.addStoryRing, { borderColor: theme.colors.primary }]}>
-                            <Image source={{ uri: user?.avatar || 'https://via.placeholder.com/60' }} style={styles.storyAvatar} />
+                            <Image source={{ uri: user?.avatar || `https://ui-avatars.com/api/?name=${user?.username || 'User'}&background=random` }} style={styles.storyAvatar} />
                             <View style={[styles.plusIcon, { backgroundColor: theme.colors.primary }]}>
                                 <Text style={styles.plusText}>+</Text>
                             </View>
@@ -141,7 +149,7 @@ const HomeScreen = ({ navigation }: any) => {
                             }}
                         >
                             <View style={[styles.storyRing, { borderColor: theme.colors.primary }]}>
-                                <Image source={{ uri: story.user.avatar || 'https://via.placeholder.com/60' }} style={styles.storyAvatar} />
+                                <Image source={{ uri: getPublicUrl(story.user.avatar) || `https://ui-avatars.com/api/?name=${story.user.username}&background=random` }} style={styles.storyAvatar} />
                             </View>
                             <Text style={[styles.storyUsername, { color: theme.colors.text }]} numberOfLines={1}>{story.user.username}</Text>
                         </TouchableOpacity>

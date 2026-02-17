@@ -10,7 +10,7 @@ interface ShareModalProps {
     onClose: () => void;
     post: {
         id: string;
-        imageUrl: string;
+        images: string[];
         caption: string;
     } | null;
 }
@@ -49,7 +49,8 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, post }) => {
         const targetId = receiverId || groupId;
         setSending(targetId);
         try {
-            const content = `POST_SHARE|${post.id}|${post.imageUrl}|${post.caption || ''}`;
+            const imageUrl = post.images && post.images.length > 0 ? post.images[0] : '';
+            const content = `POST_SHARE|${post.id}|${imageUrl}|${post.caption || ''}`;
 
             await axios.post(`${API_URL}/api/messages/send`, {
                 receiverId,

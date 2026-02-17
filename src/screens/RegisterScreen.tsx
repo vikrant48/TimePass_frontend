@@ -1,20 +1,34 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useAuth } from '../store/AuthContext';
-import { Eye, EyeOff } from 'lucide-react-native';
+import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react-native';
 
 const RegisterScreen = ({ navigation }: any) => {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+
     const { register, isLoading } = useAuth();
 
     const handleRegister = async () => {
+        if (!username || !email || !password) {
+            const msg = 'Please fill in all fields';
+            if (Platform.OS === 'web') alert(msg); else Alert.alert('Error', msg);
+            return;
+        }
+
+        if (!email.includes('@')) {
+            const msg = 'Please enter a valid email';
+            if (Platform.OS === 'web') alert(msg); else Alert.alert('Error', msg);
+            return;
+        }
+
         try {
             await register(username, email, password);
+            if (Platform.OS === 'web') alert('Registration successful!');
         } catch (error: any) {
-            alert(error.message || 'Registration failed. Please try again.');
+            if (Platform.OS === 'web') alert(error.message); else Alert.alert('Registration Failed', error.message);
         }
     };
 
@@ -23,58 +37,71 @@ const RegisterScreen = ({ navigation }: any) => {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.container}
         >
-            <View style={styles.inner}>
-                <Text style={styles.title}>Create Account</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Username"
-                    placeholderTextColor="#4b4a4aff"
-                    value={username}
-                    onChangeText={setUsername}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    placeholderTextColor="#4b4a4aff"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                />
-                <View style={styles.passwordContainer}>
-                    <TextInput
-                        style={styles.passwordInput}
-                        placeholder="Password"
-                        placeholderTextColor="#666"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry={!showPassword}
-                        autoCorrect={false}
-                    />
-                    <TouchableOpacity
-                        onPress={() => setShowPassword(!showPassword)}
-                        style={styles.eyeIcon}
-                    >
-                        {showPassword ? (
-                            <EyeOff color="#666" size={20} />
-                        ) : (
-                            <Eye color="#666" size={20} />
-                        )}
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                <View style={styles.inner}>
+                    <Text style={styles.title}>Create Account</Text>
+
+                    <View style={styles.form}>
+                        {/* Username */}
+                        <View style={styles.inputContainer}>
+                            <User color="#666" size={20} style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Username"
+                                placeholderTextColor="#999"
+                                value={username}
+                                onChangeText={setUsername}
+                                autoCapitalize="none"
+                            />
+                        </View>
+
+                        {/* Email */}
+                        <View style={styles.inputContainer}>
+                            <Mail color="#666" size={20} style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Email Address"
+                                placeholderTextColor="#999"
+                                value={email}
+                                onChangeText={setEmail}
+                                autoCapitalize="none"
+                                keyboardType="email-address"
+                            />
+                        </View>
+
+                        {/* Password */}
+                        <View style={styles.inputContainer}>
+                            <Lock color="#666" size={20} style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Password"
+                                placeholderTextColor="#999"
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry={!showPassword}
+                            />
+                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                {showPassword ? <EyeOff color="#666" size={20} /> : <Eye color="#666" size={20} />}
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Register Button */}
+                        <TouchableOpacity
+                            style={[styles.button, isLoading && styles.buttonDisabled]}
+                            onPress={handleRegister}
+                            disabled={isLoading}
+                        >
+                            <Text style={styles.buttonText}>
+                                {isLoading ? 'Creating Account...' : 'Register'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.loginLink}>
+                        <Text style={styles.loginLinkText}>Already have an account? Login</Text>
                     </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                    style={styles.button}
-                    onPress={handleRegister}
-                    disabled={!!isLoading}
-                >
-                    <Text style={styles.buttonText}>{isLoading ? 'Creating account...' : 'Register'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                    <Text style={styles.linkText}>Already have an account? Login</Text>
-                </TouchableOpacity>
-            </View>
+            </ScrollView>
         </KeyboardAvoidingView>
     );
 };
@@ -84,64 +111,69 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
     },
+    scrollContent: {
+        flexGrow: 1,
+    },
     inner: {
-        padding: 24,
+        padding: 20,
         flex: 1,
         justifyContent: 'center',
+        maxWidth: 500,
+        alignSelf: 'center',
+        width: '100%',
     },
     title: {
-        fontSize: 32,
+        fontSize: 28,
         fontWeight: 'bold',
         textAlign: 'center',
-        marginBottom: 40,
+        marginBottom: 30,
         color: '#000',
     },
-    input: {
-        height: 50,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        paddingHorizontal: 16,
-        marginBottom: 16,
-        fontSize: 16,
-        color: '#000',
+    form: {
+        width: '100%',
     },
-    passwordContainer: {
+    inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#ddd',
-        borderRadius: 8,
-        marginBottom: 16,
-        height: 50,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        marginBottom: 15,
+        height: 55,
+        backgroundColor: '#fff',
     },
-    passwordInput: {
+    inputIcon: {
+        marginRight: 10,
+    },
+    input: {
         flex: 1,
-        height: '100%',
-        paddingHorizontal: 16,
         fontSize: 16,
         color: '#000',
     },
-    eyeIcon: {
-        paddingHorizontal: 12,
-    },
     button: {
-        height: 50,
+        height: 55,
         backgroundColor: '#000',
-        borderRadius: 8,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 8,
+        marginTop: 10,
+    },
+    buttonDisabled: {
+        backgroundColor: '#ccc',
     },
     buttonText: {
         color: '#fff',
         fontSize: 18,
         fontWeight: 'bold',
     },
-    linkText: {
-        marginTop: 20,
+    loginLink: {
+        marginTop: 25,
+    },
+    loginLinkText: {
         textAlign: 'center',
         color: '#007AFF',
+        fontSize: 14,
     },
 });
 

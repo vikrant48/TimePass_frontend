@@ -46,25 +46,45 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ visible, onClose, onP
 
             if (isStory) {
                 const uri = imageUrls[0];
-                const filename = uri.split('/').pop();
-                const match = /\.(\w+)$/.exec(filename || '');
-                const type = match ? `image/${match[1]}` : `image`;
-                formData.append('image', { uri, name: filename, type } as any);
+                const filename = uri.split('/').pop() || 'story.jpg';
+                const match = /\.(\w+)$/.exec(filename);
+                const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+                if (Platform.OS === 'web') {
+                    const blob = await fetch(uri).then(r => r.blob());
+                    formData.append('image', blob, filename);
+                } else {
+                    formData.append('image', { uri, name: filename, type } as any);
+                }
 
                 await axios.post(`${API_URL}/api/stories`, formData, {
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'multipart/form-data'
+                    },
                 });
             } else {
                 formData.append('caption', caption);
-                imageUrls.forEach((uri, index) => {
-                    const filename = uri.split('/').pop();
-                    const match = /\.(\w+)$/.exec(filename || '');
-                    const type = match ? `image/${match[1]}` : `image`;
-                    formData.append('images', { uri, name: filename, type } as any);
-                });
+
+                // For web, we need to fetch multiple blobs. Using for...of for async/await
+                for (const uri of imageUrls) {
+                    const filename = uri.split('/').pop() || `image_${Date.now()}.jpg`;
+                    const match = /\.(\w+)$/.exec(filename);
+                    const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+                    if (Platform.OS === 'web') {
+                        const blob = await fetch(uri).then(r => r.blob());
+                        formData.append('images', blob, filename);
+                    } else {
+                        formData.append('images', { uri, name: filename, type } as any);
+                    }
+                }
 
                 await axios.post(`${API_URL}/api/posts`, formData, {
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'multipart/form-data'
+                    },
                 });
             }
 

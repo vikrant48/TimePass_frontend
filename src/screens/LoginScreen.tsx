@@ -6,32 +6,18 @@ import { Eye, EyeOff } from 'lucide-react-native';
 const LoginScreen = ({ navigation }: any) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [otp, setOtp] = useState('');
-    const [requiresOtp, setRequiresOtp] = useState(false);
-    const [tempUserId, setTempUserId] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const { login, verify2FA, isLoading } = useAuth();
+    const { login, isLoading } = useAuth();
 
     const handleLogin = async () => {
-        try {
-            const result = await login(email, password);
-            if (result && result.require_2fa) {
-                setRequiresOtp(true);
-                setTempUserId(result.userId);
-                if (result.otp_demo) {
-                    alert(`DEMO ONLY: Your OTP is ${result.otp_demo}`);
-                }
-            }
-        } catch (error) {
-            alert('Login failed. Please check your credentials.');
+        if (!email || !password) {
+            alert('Please fill in all fields');
+            return;
         }
-    };
-
-    const handleVerifyOtp = async () => {
         try {
-            await verify2FA(tempUserId, otp);
-        } catch (error) {
-            alert('Invalid OTP. Please try again.');
+            await login(email, password);
+        } catch (error: any) {
+            alert(error.response?.data?.message || 'Login failed. Please check your credentials.');
         }
     };
 
@@ -43,73 +29,48 @@ const LoginScreen = ({ navigation }: any) => {
             <View style={styles.inner}>
                 <Text style={styles.title}>TimePass</Text>
 
-                {requiresOtp ? (
-                    <View>
-                        <Text style={styles.subtitle}>Enter the 6-digit code sent to your email</Text>
+                <View>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Email"
+                        placeholderTextColor="#212020ff"
+                        value={email}
+                        onChangeText={setEmail}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                    />
+                    <View style={styles.passwordContainer}>
                         <TextInput
-                            style={styles.input}
-                            placeholder="Verification Code"
+                            style={styles.passwordInput}
+                            placeholder="Password"
                             placeholderTextColor="#666"
-                            value={otp}
-                            onChangeText={setOtp}
-                            keyboardType="number-pad"
-                            maxLength={6}
-                        />
-                        <TouchableOpacity
-                            style={styles.button}
-                            onPress={handleVerifyOtp}
-                            disabled={!!isLoading}
-                        >
-                            <Text style={styles.buttonText}>{isLoading ? 'Verifying...' : 'Verify Code'}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setRequiresOtp(false)} style={styles.backButton}>
-                            <Text style={styles.linkText}>Back to Login</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-                    <View>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Email"
-                            placeholderTextColor="#212020ff"
-                            value={email}
-                            onChangeText={setEmail}
-                            autoCapitalize="none"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry={!showPassword}
                             autoCorrect={false}
                         />
-                        <View style={styles.passwordContainer}>
-                            <TextInput
-                                style={styles.passwordInput}
-                                placeholder="Password"
-                                placeholderTextColor="#666"
-                                value={password}
-                                onChangeText={setPassword}
-                                secureTextEntry={!showPassword}
-                                autoCorrect={false}
-                            />
-                            <TouchableOpacity
-                                onPress={() => setShowPassword(!showPassword)}
-                                style={styles.eyeIcon}
-                            >
-                                {showPassword ? (
-                                    <EyeOff color="#666" size={20} />
-                                ) : (
-                                    <Eye color="#666" size={20} />
-                                )}
-                            </TouchableOpacity>
-                        </View>
                         <TouchableOpacity
-                            style={styles.button}
-                            onPress={handleLogin}
-                            disabled={!!isLoading}
+                            onPress={() => setShowPassword(!showPassword)}
+                            style={styles.eyeIcon}
                         >
-                            <Text style={styles.buttonText}>{isLoading ? 'Logging in...' : 'Login'}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                            <Text style={styles.linkText}>Don't have an account? Register</Text>
+                            {showPassword ? (
+                                <EyeOff color="#666" size={20} />
+                            ) : (
+                                <Eye color="#666" size={20} />
+                            )}
                         </TouchableOpacity>
                     </View>
-                )}
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={handleLogin}
+                        disabled={!!isLoading}
+                    >
+                        <Text style={styles.buttonText}>{isLoading ? 'Logging in...' : 'Login'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+                        <Text style={styles.linkText}>Don't have an account? Register</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         </KeyboardAvoidingView>
     );
@@ -131,15 +92,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 40,
         color: '#000',
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-        marginBottom: 24,
-    },
-    backButton: {
-        marginTop: 16,
     },
     input: {
         height: 50,

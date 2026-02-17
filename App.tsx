@@ -24,7 +24,8 @@ function AppInner() {
     // Listen for notification interactions
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
-      console.log('Notification clicked:', data);
+      // Notification clicked
+
       // Navigation logic could go here
     });
 

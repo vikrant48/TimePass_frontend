@@ -9,6 +9,14 @@ import io from 'socket.io-client';
 import { API_URL } from '../config';
 import { useTheme } from '../theme/ThemeContext';
 
+const getPublicUrl = (url: string) => {
+    if (!url) return url;
+    if (url.includes('storage.supabase.co')) {
+        return url.replace('.storage.supabase.co/', '.supabase.co/storage/v1/object/public/');
+    }
+    return url;
+};
+
 const ChatDetailScreen = ({ route, navigation }: any) => {
     const { otherUser, group } = route.params;
     const [message, setMessage] = useState('');
@@ -185,11 +193,16 @@ const ChatDetailScreen = ({ route, navigation }: any) => {
                 const match = /\.(\w+)$/.exec(filename || '');
                 const type = match ? `image/${match[1]}` : `image`;
 
-                formData.append('image', {
-                    uri,
-                    name: filename,
-                    type,
-                } as any);
+                if (Platform.OS === 'web') {
+                    const blob = await fetch(uri).then(r => r.blob());
+                    formData.append('images', blob, filename);
+                } else {
+                    formData.append('images', {
+                        uri,
+                        name: filename,
+                        type,
+                    } as any);
+                }
 
                 // Use the existing posts endpoint which handles S3 upload
                 const uploadResponse = await axios.post(`${API_URL}/api/posts`, formData, {
@@ -199,7 +212,7 @@ const ChatDetailScreen = ({ route, navigation }: any) => {
                     },
                 });
 
-                const s3Url = uploadResponse.data.imageUrl;
+                const s3Url = uploadResponse.data.images[0];
                 const content = `PHOTO_SHARE|${s3Url}`;
 
                 const payload: any = { senderId: user.id, content };
@@ -253,13 +266,18 @@ const ChatDetailScreen = ({ route, navigation }: any) => {
             try {
                 const formData = new FormData();
                 const filename = `voice_${Date.now()}.m4a`;
-                formData.append('image', { uri, name: filename, type: 'audio/m4a' } as any);
+                if (Platform.OS === 'web') {
+                    const blob = await fetch(uri).then(r => r.blob());
+                    formData.append('images', blob, filename);
+                } else {
+                    formData.append('images', { uri, name: filename, type: 'audio/m4a' } as any);
+                }
 
                 const uploadResponse = await axios.post(`${API_URL}/api/posts`, formData, {
                     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
                 });
 
-                const content = `VOICE_MESSAGE|${uploadResponse.data.imageUrl}`;
+                const content = `VOICE_MESSAGE|${uploadResponse.data.images[0]}`;
                 const payload: any = { senderId: user.id, content };
                 if (isGroup) payload.groupId = group.id; else payload.receiverId = otherUser.id;
                 socketRef.current.emit('sendMessage', payload);
@@ -308,11 +326,11 @@ const ChatDetailScreen = ({ route, navigation }: any) => {
     const parseMessageContent = (content: string) => {
         if (content.startsWith('POST_SHARE|')) {
             const [, postId, imageUrl, caption] = content.split('|');
-            return { type: 'post', postId, imageUrl, caption };
+            return { type: 'post', postId, imageUrl: getPublicUrl(imageUrl), caption };
         }
         if (content.startsWith('PHOTO_SHARE|')) {
             const [, imageUrl] = content.split('|');
-            return { type: 'photo', imageUrl };
+            return { type: 'photo', imageUrl: getPublicUrl(imageUrl) };
         }
         if (content.startsWith('VOICE_MESSAGE|')) {
             const [, audioUrl] = content.split('|');
